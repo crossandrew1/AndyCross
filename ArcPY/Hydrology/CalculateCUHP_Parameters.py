@@ -1,5 +1,3 @@
-
-
 import arcpy
 import arcpy.da
 import ArcHydroTools as AHT
@@ -10,7 +8,7 @@ import time
 import shutil
 
 DELETE = False		# leave this as False until the memory issue is fixed 
-BASINS_NAME = "final_flowpaths_north"
+BASINS_NAME = "Tribs_Subcatchments_v3"
 HOME_DIRECTORY ="C:/CUHP"
 #os.getcwd()
 BASIN_GDB = HOME_DIRECTORY+str('/working_gdb_archive.gdb/')
@@ -87,18 +85,18 @@ for i, id in enumerate(IDs):
 	# 4. determine longest flow path in catchmentarcpy.CreateTable_management(PROCESS_GDB, 'lfp_points_table_{}'.format(i))
 	# 5. determine centroid in catchment
 	# 6. determine centroidal flow path in catchment
-	print('Assigning HydroID')
+	#print('Assigning HydroID')
 	AHT.AssignHydroID(TEMP_FC)
-	print('Filling DEM sinks')
-	AHT.FillSinks(TEMP_DEM, 'fil_{}'.format(i))
-	print('Creating flow direction raster')
-	AHT.FlowDirection('{}/Layers/fil_{}'.format(HOME_DIRECTORY, i), 'fdr_{}'.format(i))
-	print('Creating flow accumulation raster')
-	AHT.FlowAccumulation('{}/Layers/fdr_{}'.format(HOME_DIRECTORY, i), 'fac_{}'.format(i))
-	print('Determining longest flow path')
+	#print('Filling DEM sinks')
+	#AHT.FillSinks(TEMP_DEM, 'fil_{}'.format(i))
+	#print('Creating flow direction raster')
+	#AHT.FlowDirection('{}/Layers/fil_{}'.format(HOME_DIRECTORY, i), 'fdr_{}'.format(i))
+	#print('Creating flow accumulation raster')
+	#AHT.FlowAccumulation('{}/Layers/fdr_{}'.format(HOME_DIRECTORY, i), 'fac_{}'.format(i))
+	#print('Determining longest flow path')
 	if not os.path.exists("C:/CUHP/LFP_dat"):
             os.mkdir("C:/CUHP/LFP_dat")
-        break
+        
 	arcpy.PolygonToRaster_conversion(in_features="temp_fc", value_field="name", out_rasterdataset="C:/CUHP/LFP_dat/CATCHM")
         arcpy.gp.FocalStatistics_sa("CATCHM", "C:/CUHP/LFP_dat/RANGE", "Rectangle 3 3 CELL", "RANGE", "DATA")
         arcpy.gp.RasterCalculator_sa("""Con("RANGE" == 0,"CATCHM")""", "C:/CUHP/LFP_dat/ISLANDS")
@@ -128,27 +126,27 @@ for i, id in enumerate(IDs):
         
 	#AHT.LongestFlowPath(TEMP_FC, '{}/Layers/fdr_{}'.format(HOME_DIRECTORY, i), 'longestflowpath_{}'.format(i))
 	print('Determining centroid')
-	AHT.DrainageAreaCentroid(TEMP_FC, 'centroid_{}'.format(i))
+	arcpy.FeatureToPoint_management("temp_fc", '{}/centroid_{}'.format(PROCESS_GDB,i), "CENTROID")
 	
 	print('Determining centroidal flow path')
 	# a. find the nearest point on the line to the centroid
 	# b. split the line at that point
 	# c. define the upper portion as centroidal flow path
 	# d. select the upper portion, export it to keep as centroidal flow path
-	arcpy.analysis.GenerateNearTable('{}/Layers/centroid_{}'.format(PROCESS_GDB, i), '{}/Layers/longestflowpath_{}.shp'.format(HOME_DIRECTORY, i),out_table = "{}near_table_{}".format(PROCESS_GDB, i), location = "LOCATION")
+	arcpy.analysis.GenerateNearTable('{}/centroid_{}'.format(PROCESS_GDB, i), '{}/Layers/longestflowpath_{}.shp'.format(HOME_DIRECTORY, i),out_table = "{}near_table_{}".format(PROCESS_GDB, i), location = "LOCATION")
         ref=r"C:\CUHP\CN.prj"
 	arcpy.MakeXYEventLayer_management("{}near_table_{}".format(PROCESS_GDB, i), 'NEAR_X', 'NEAR_Y', 'near_xy',ref)
     
-	arcpy.FeatureToPoint_management ('near_xy','{}Layers/near_point_{}'.format(PROCESS_GDB, i))
-	arcpy.SplitLineAtPoint_management('{}/Layers/longestflowpath_{}.shp'.format(HOME_DIRECTORY, i), '{}/Layers/near_point_{}'.format(PROCESS_GDB, i), '{}Layers/lfp_split_{}'.format(PROCESS_GDB, i))
+	arcpy.FeatureToPoint_management ('near_xy','{}/near_point_{}'.format(PROCESS_GDB, i))
+	arcpy.SplitLineAtPoint_management('{}/Layers/longestflowpath_{}.shp'.format(HOME_DIRECTORY, i), '{}/near_point_{}'.format(PROCESS_GDB, i), '{}/lfp_split_{}'.format(PROCESS_GDB, i))
 	
-	temp_split_lfp = '{}/Layers/lfp_split_{}'.format(PROCESS_GDB, i)
+	temp_split_lfp = '{}/lfp_split_{}'.format(PROCESS_GDB, i)
 	arcpy.MakeFeatureLayer_management(temp_split_lfp, "split_lfp_{}".format(i))
 	temp_layer = arcpy.mapping.Layer( "split_lfp_{}".format(i))
 	arcpy.mapping.AddLayer(df, temp_layer, "TOP")
 	clause_OID = '"OBJECTID" = 2'
 	arcpy.SelectLayerByAttribute_management(in_layer_or_view =  "split_lfp_{}".format(i), where_clause =clause_OID)
-	arcpy.CopyFeatures_management('split_lfp_{}'.format(i), '{}/Layers/centroidal_path_{}'.format(PROCESS_GDB, i))
+	arcpy.CopyFeatures_management('split_lfp_{}'.format(i), '{}/centroidal_path_{}'.format(PROCESS_GDB, i))
 	arcpy.SelectLayerByAttribute_management(in_layer_or_view =  "split_lfp_{}".format(i), selection_type = 'CLEAR_SELECTION')
 	arcpy.Delete_management('split_lfp_{}'.format(i))
 	
@@ -160,7 +158,7 @@ for i, id in enumerate(IDs):
 	arcpy.CalculateField_management(in_table = basins, field = 'LFP_mi', expression = lfp_length_mi)
 	
 	try:
-		cfp_length_mi = [f[0] for f in arcpy.da.SearchCursor('{}centroidal_path_{}'.format(PROCESS_GDB, i), 'SHAPE@LENGTH')][0]/5280
+		cfp_length_mi = [f[0] for f in arcpy.da.SearchCursor('{}centroidal_path_{}'.format(PROCESS_GDB, i), 'SHAPE@LENGTH')][1]/5280
 	except:
 		cfp_length_mi = 9999999
 	print('Centroidal flow path [mi] = {}'.format(cfp_length_mi))
@@ -187,13 +185,13 @@ for i, id in enumerate(IDs):
 		for row in lfp_points:
 			cur.insertRow(row)
 	arcpy.MakeXYEventLayer_management('{}lfp_points_table_{}'.format(PROCESS_GDB, i), 'X', 'Y', 'lfp_points_layer')
-	arcpy.FeatureToPoint_management('lfp_points_layer', '{}/Layers/lfp_points_points_{}'.format(PROCESS_GDB, i))
-	arcpy.SplitLineAtPoint_management('{}/Layers/longestflowpath_{}.shp'.format(HOME_DIRECTORY, i), '{}Layers/lfp_points_points_{}'.format(PROCESS_GDB, i), '{}Layers/slope_lines_{}'.format(PROCESS_GDB, i), '0 feet')
-	arcpy.AddSurfaceInformation_3d('{}Layers/slope_lines_{}'.format(PROCESS_GDB, i), TEMP_DEM, 'AVG_SLOPE')
+	arcpy.FeatureToPoint_management('lfp_points_layer', '{}/lfp_points_points_{}'.format(PROCESS_GDB, i))
+	arcpy.SplitLineAtPoint_management('{}/Layers/longestflowpath_{}.shp'.format(HOME_DIRECTORY, i), '{}/lfp_points_points_{}'.format(PROCESS_GDB, i), '{}/slope_lines_{}'.format(PROCESS_GDB, i), '0 feet')
+	arcpy.AddSurfaceInformation_3d('{}/slope_lines_{}'.format(PROCESS_GDB, i), TEMP_DEM, 'AVG_SLOPE')
 	
 	slope_numerator = 0
 	slope_denominator = 0
-	with arcpy.da.SearchCursor('{}Layers/slope_lines_{}'.format(PROCESS_GDB, i), ['Shape_Length', 'Avg_Slope']) as cur:
+	with arcpy.da.SearchCursor('{}/slope_lines_{}'.format(PROCESS_GDB, i), ['Shape_Length', 'Avg_Slope']) as cur:
 		for row in cur:
 			slope_numerator += row[0]*(row[1]*0.01)**0.24
 			slope_denominator += row[0]
@@ -214,8 +212,4 @@ for i, id in enumerate(IDs):
         arcpy.Delete_management('fil_{}'.format(i))
         arcpy.Delete_management('fdr_{}'.format(i))
 	print('Finished processing {}\n'.format(id))
-	
-cent=[]
-for i in range(0,len(IDs):
-    cent.append('centroidal_path_{}'.format(i))
-arcpy.Merge_management(cent,'cfp_merged') 
+

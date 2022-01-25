@@ -1,21 +1,21 @@
-'''
-Updated 04/17/2020 Andy Cross
 
-The first import function reads in the "conduits" table as taken from SWMM, the second is a two column matrix of basins and associated areas, the third is a 
-list of design points along a river. This code will calculate contributing area to the listed design points and then sum the contributing areas along the river.
+#Updated 04/17/2020 Andy Cross
 
-Because of how this calculates the way design points contribute to eachother, this will give inaccurate results if there are design points along tributaries.
+#The first import function reads in the "conduits" table as taken from SWMM, the second is a two column matrix of basins and associated areas, the third is a 
+#list of design points along a river. This code will calculate contributing area to the listed design points and then sum the contributing areas along the river.
 
-'''
-#dat is the swmm routing information taken from swmm model
-dat<-read.csv("Z:/MHFD/First Creek/888_SCRIPTS/ContributingDrainageData/swc2.csv",header = FALSE,fileEncoding="UTF-8-BOM")
+#Because of how this calculates the way design points contribute to each other, this will give inaccurate results if there are design points along tributaries.
+
+
+#dat is the swmm routing information taken from swmm model OUTLETS MUST BE INCLUDED IN THE CONDUITS LAYER
+dat<-read.csv("N:/Projects/W0010 - MHFD/03941_First Creek/30_Alternatives/Alternatives_FinalSubmittal_20210927/ScriptData/Conduits_TAH_ProposedChanges.csv",header = FALSE,fileEncoding="UTF-8-BOM")
 #basins are the basins and associated areas taken from cuhp
-basins<-read.csv("Z:/MHFD/First Creek/888_SCRIPTS/ContributingDrainageData/BasinArea.csv",header = FALSE,fileEncoding="UTF-8-BOM")
+basins<-read.csv("N:/Projects/W0010 - MHFD/03941_First Creek/30_Alternatives/Alternatives_FinalSubmittal_20210927/ScriptData/BasinArea.csv",header = FALSE,fileEncoding="UTF-8-BOM")
 #dp are the design points of interest along the network
-dp<-read.csv("Z:/MHFD/First Creek/888_SCRIPTS/ContributingDrainageData/FCMainDP.csv",header = FALSE,fileEncoding="UTF-8-BOM")
+dp<-read.csv("N:/Projects/W0010 - MHFD/03941_First Creek/888_SCRIPTS/ContributingDrainageData/FCTAH_DP.csv",header = FALSE,fileEncoding="UTF-8-BOM")
 
 ##path to swmm are the rpt files
-path_to_swmm<-"Z:/MHFD/First Creek/30_Alternatives/SWMM/test/"
+path_to_swmm<-"C:/Users/andy.cross/Desktop/3_The_Aurora_Highlands_20210119/RESPEC_Models_Modified_for_Analysis/SWMM/"
 
 
 
@@ -35,11 +35,12 @@ start<-matrix(0,nrow=500,ncol=10)
 '%ni%' <- Negate('%in%')
 
 for(i in 1:length(basins$name)){
- # print(as.character(basins$name[i]))
+  print(paste("basinName",as.character(basins$name[i])))
   pos<-which(as.character(dat$inlet) %in% c(as.character(basins$name[i])))
+  print(pos)
   out<-as.character(dat$outlet[pos])
   start[i,1]<-as.character(basins$name[i])
-  start[i,2]<-as.character(out)
+  start[i,2]<-as.character(out[1])
 #  print(out)
   while(as.character(out)%ni% c(as.character(dp$name)) == TRUE){
     inlet_loc<-which(as.character(dat$inlet) %in% c(as.character(out)))
@@ -94,8 +95,13 @@ for(i in 1:length(design_p$val)){
       data_doc[j]<-which(as.character(basins$name)%in% c(as.character(basin_doc[j])))
       
     }
-    v=which(data_doc==0)
-    data_doc<-data_doc[-v]
+    m=which(data_doc==0)
+    if(isTRUE(length(m)==0)){
+      
+    }
+    else{
+    data_doc<-data_doc[-m]
+    }
     for(f in 1:length(data_doc)){
       datad[f]<-basins$area[data_doc[f]]
     }
@@ -104,8 +110,13 @@ for(i in 1:length(design_p$val)){
     for(k in 1:length(basin_loc)){
       data_loc[k]<-which(as.character(basins$name)%in% c(as.character(basin_loc[k])))
     }
-    z=which(data_loc==0)
-    data_loc<-data_loc[-z]
+    p=which(data_loc==0)
+    if(isTRUE(length(p)==0)){
+      
+    }
+    else{
+    data_loc<-data_loc[-p]
+    }
     for(h in 1:length(data_loc)){
        datal[h]<-basins$area[data_loc[h]]
     }
@@ -113,20 +124,35 @@ for(i in 1:length(design_p$val)){
   else{
     for(g in 1:length(basin_loc)){
       data_loc[g]<-which(as.character(basins$name)%in% c(as.character(basin_loc[g])))
+      print(paste("data loc g",data_loc[g]))
     }
     z=which(data_loc==0)
+    if(isTRUE(length(z)==0)){
+      
+    }
+    else{
     data_loc<-data_loc[-z]
+    }
     for(l in 1:length(basin_doc)){
       data_doc[l]<-which(as.character(basins$name)%in% c(as.character(basin_doc[l])))
     }
+    
     v=which(data_doc==0)
+    if(isTRUE(length(v)==0)){
+      
+    }
+    else{
     data_doc<-data_doc[-v]
+    }
     for(a in 1:length(data_loc)){
+      
       datal[a]<-basins$area[data_loc[a]]
     }
+  
     for(d in 1:length(data_doc)){
       datad[d]<-basins$area[data_doc[d]]
     }
+    
   }
   dp_area[i,1]<-as.character(design_p$val[i])
   dp_area[i,2]<-sum(as.numeric(as.character(datal)))+sum(as.numeric(as.character(datad)))
@@ -213,7 +239,7 @@ for(p in 1:length(sort$area_contributed_to_DP)){
     sort$areaMajor[p] = 45
   }
   else if(sort$area_contributed_to_DP[p] == 50 || sort$area_contributed_to_DP[p] < 55 ){
-    sort$areaMajor[p] = 50
+    sort$areaMajor[p] = 45
   }
 }
 for(p in 1:length(sort$area_contributed_to_DP)){
@@ -244,7 +270,7 @@ for(p in 1:length(sort$area_contributed_to_DP)){
   else if(sort$area_contributed_to_DP[p] == 40 || sort$area_contributed_to_DP[p] < 45 ){
     sort$areaMinor[p] = 40
   }
-  else if(sort$area_contributed_to_DP[p] == 45 || sort$area_contributed_to_DP[p] < 50 ){
+  else if(sort$area_contributed_to_DP[p] == 45 || sort$area_contributed_to_DP[p] < 55 ){
     sort$areaMinor[p] = 45
   }
 }
@@ -255,23 +281,24 @@ design_points<-sort
 
 files<-list.files(path=path_to_swmm,pattern = ".rpt")
 
-p1=3
-p2=4
-
+#p1 is for future or existing p2 is for the return period of interest p3 is area correction
+p1=10
+p2=11
+p3=12
 for(i in files){
   file<-paste(path_to_swmm,i,sep="")
   print(file)
   unl_file<-unlist(strsplit(as.character(file),"_"))
-  #print(unl_file[])
-  g<-unlist(strsplit(as.character(file),"_"))[5]
+  print(unl_file)
+  g<-unlist(strsplit(as.character(file),"_"))[p3]
   f<-unlist(strsplit(g,""))
   f<-f[1:6]
   #print(f)
   f<-paste(f[1],f[2],sep="")
   f<-as.character(f)
-  #print(paste("f",f))
-  #print(paste("UNLFILE4",unl_file[4]))
-  if(as.character(unl_file[4]) == "WQ" || as.character(unl_file[4]) == "2yr" || as.character(unl_file[4]) == "5yr" || as.character(unl_file[4]) == "10yr"){
+  print(paste("f",f))
+  print(paste("UNLFILE4",unl_file[p2]))
+  if(as.character(unl_file[p2]) == "WQ" || as.character(unl_file[p2]) == "2yr" || as.character(unl_file[p2]) == "5yr" || as.character(unl_file[p2]) == "10yr"){
     pos<-which(as.character(design_points$areaMinor) %in% c(as.character(f)))
   }
   else{
@@ -279,9 +306,9 @@ for(i in files){
   }
   #print(paste("pos",pos))
   for(u in 1:length(pos)){
-    #print(paste("posU",pos[u]))
+    print(paste("posU",pos[u]))
     junction<-as.character(design_points$DP[pos[u]])
-    #print(paste("junction",junction))
+    print(paste("junction",junction))
     df<-read.table(file,sep = '\t' )
     for(d in 1:length(df[,1])){
       nodes_search<-strsplit(as.character(df[d,]),"\\s+")
@@ -293,7 +320,7 @@ for(i in files){
     for(h in 1:length(df[,1])){
       if(as.character("  Node Inflow Summary") == as.character(df[h,])){
         node_summary=as.numeric(as.character(h))
-        #print(paste("node sum",node_summary))
+        print(paste("node sum",node_summary))
       }
     }
     node_matrix<-matrix(0,nrow=number_nodes+15,ncol=10)
@@ -302,16 +329,16 @@ for(i in files){
       vals<-t(unlist(strsplit(as.character(df[j,]),"\\s+")))
       
       if(isTRUE(vals[2] == junctions)){
-        #print(paste("vals 5",vals[5]))
+        print(paste("vals 5",vals[5]))
         if(isTRUE(unl_file[p1] == "Ex" && unl_file[p2] == "WQ")){
           design_points$WQ_Existing[pos[u]]<-as.character(vals[5])
           #print(vals[5])
-          #print(paste("vals 5",vals[5]))
+          print(paste("vals 5",vals[5]))
         }
         else if(isTRUE(unl_file[p1] == "Fut" && unl_file[p2] == "WQ")){
           design_points$WQ_Future[pos[u]]<-as.character(vals[5])
           #print(vals[5])
-          #print(paste("vals 5",vals[5]))
+          print(paste("vals 5",vals[5]))
         }
         
         else if(isTRUE(unl_file[p1] == "Ex" && unl_file[p2] == "2yr")){
@@ -379,7 +406,7 @@ for(i in files){
   }
 }
 
-write.csv(design_points,"Z:/MHFD/First Creek/888_SCRIPTS/ContributingDrainageData/UpdatedPeakFlows_alt3.csv")
+write.csv(design_points,"N:/Projects/W0010 - MHFD/W0010.21002-Hydrology Living Model/00_DELIVERABLES/20220124_AuroraHighlands/PeakFlow_SummaryTables/TheAuroraHighlandsAnalysis_TAHTribPeakFlow_20220124.csv")
 
 
 

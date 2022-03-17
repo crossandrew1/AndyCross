@@ -4,18 +4,18 @@
 #The first import function reads in the "conduits" table as taken from SWMM, the second is a two column matrix of basins and associated areas, the third is a 
 #list of design points along a river. This code will calculate contributing area to the listed design points and then sum the contributing areas along the river.
 
-#Because of how this calculates the way design points contribute to each other, this will give inaccurate results if there are design points along tributaries.
+#Because of how this calculates the way design points contribute to eachother, this will give inaccurate results if there are design points along tributaries.
 
 
-#dat is the swmm routing information taken from swmm model OUTLETS MUST BE INCLUDED IN THE CONDUITS LAYER
-dat<-read.csv("N:/Projects/W0010 - MHFD/03941_First Creek/30_Alternatives/Alternatives_FinalSubmittal_20210927/ScriptData/Conduits_TAH_ProposedChanges.csv",header = FALSE,fileEncoding="UTF-8-BOM")
+#dat is the swmm routing information taken from swmm model
+dat<-read.csv("N:/Projects/W0010 - MHFD/W0010.21002-Hydrology Living Model/3_Models/4_Traditions_Pond_Modifications_in_Aurora/ScriptOutput/Traditions_Conduits.csv",header = FALSE,fileEncoding="UTF-8-BOM")
 #basins are the basins and associated areas taken from cuhp
-basins<-read.csv("N:/Projects/W0010 - MHFD/03941_First Creek/30_Alternatives/Alternatives_FinalSubmittal_20210927/ScriptData/BasinArea.csv",header = FALSE,fileEncoding="UTF-8-BOM")
+basins<-read.csv("N:/Projects/W0010 - MHFD/W0010.21002-Hydrology Living Model/3_Models/4_Traditions_Pond_Modifications_in_Aurora/ScriptOutput/AlternativeOrigBasin.csv",header = FALSE,fileEncoding="UTF-8-BOM")
 #dp are the design points of interest along the network
-dp<-read.csv("N:/Projects/W0010 - MHFD/03941_First Creek/888_SCRIPTS/ContributingDrainageData/FCTAH_DP.csv",header = FALSE,fileEncoding="UTF-8-BOM")
+dp<-read.csv("N:/Projects/W0010 - MHFD/W0010.21002-Hydrology Living Model/3_Models/4_Traditions_Pond_Modifications_in_Aurora/ScriptOutput/FCMainDP.csv",header = FALSE,fileEncoding="UTF-8-BOM")
 
 ##path to swmm are the rpt files
-path_to_swmm<-"C:/Users/andy.cross/Desktop/3_The_Aurora_Highlands_20210119/RESPEC_Models_Modified_for_Analysis/SWMM/"
+path_to_swmm<-"C:/Users/andy.cross/Desktop/hlcLiving/4_Traditions_Pond_Modifications_in_Aurora/SWMM/"
 
 
 
@@ -35,7 +35,7 @@ start<-matrix(0,nrow=500,ncol=10)
 '%ni%' <- Negate('%in%')
 
 for(i in 1:length(basins$name)){
-  print(paste("basinName",as.character(basins$name[i])))
+  print(as.character(basins$name[i]))
   pos<-which(as.character(dat$inlet) %in% c(as.character(basins$name[i])))
   print(pos)
   out<-as.character(dat$outlet[pos])
@@ -95,13 +95,8 @@ for(i in 1:length(design_p$val)){
       data_doc[j]<-which(as.character(basins$name)%in% c(as.character(basin_doc[j])))
       
     }
-    m=which(data_doc==0)
-    if(isTRUE(length(m)==0)){
-      
-    }
-    else{
-    data_doc<-data_doc[-m]
-    }
+    v=which(data_doc==0)
+    data_doc<-data_doc[-v]
     for(f in 1:length(data_doc)){
       datad[f]<-basins$area[data_doc[f]]
     }
@@ -110,13 +105,8 @@ for(i in 1:length(design_p$val)){
     for(k in 1:length(basin_loc)){
       data_loc[k]<-which(as.character(basins$name)%in% c(as.character(basin_loc[k])))
     }
-    p=which(data_loc==0)
-    if(isTRUE(length(p)==0)){
-      
-    }
-    else{
-    data_loc<-data_loc[-p]
-    }
+    z=which(data_loc==0)
+    data_loc<-data_loc[-z]
     for(h in 1:length(data_loc)){
        datal[h]<-basins$area[data_loc[h]]
     }
@@ -124,35 +114,20 @@ for(i in 1:length(design_p$val)){
   else{
     for(g in 1:length(basin_loc)){
       data_loc[g]<-which(as.character(basins$name)%in% c(as.character(basin_loc[g])))
-      print(paste("data loc g",data_loc[g]))
     }
     z=which(data_loc==0)
-    if(isTRUE(length(z)==0)){
-      
-    }
-    else{
     data_loc<-data_loc[-z]
-    }
     for(l in 1:length(basin_doc)){
       data_doc[l]<-which(as.character(basins$name)%in% c(as.character(basin_doc[l])))
     }
-    
     v=which(data_doc==0)
-    if(isTRUE(length(v)==0)){
-      
-    }
-    else{
     data_doc<-data_doc[-v]
-    }
     for(a in 1:length(data_loc)){
-      
       datal[a]<-basins$area[data_loc[a]]
     }
-  
     for(d in 1:length(data_doc)){
       datad[d]<-basins$area[data_doc[d]]
     }
-    
   }
   dp_area[i,1]<-as.character(design_p$val[i])
   dp_area[i,2]<-sum(as.numeric(as.character(datal)))+sum(as.numeric(as.character(datad)))
@@ -281,15 +256,20 @@ design_points<-sort
 
 files<-list.files(path=path_to_swmm,pattern = ".rpt")
 
-#p1 is for future or existing p2 is for the return period of interest p3 is area correction
-p1=10
-p2=11
-p3=12
+
 for(i in files){
   file<-paste(path_to_swmm,i,sep="")
   print(file)
   unl_file<-unlist(strsplit(as.character(file),"_"))
-  print(unl_file)
+  print(length(unl_file))
+  for(i in 1:length(unl_file)){
+    if(unl_file[i]=="Fut" || unl_file[i]=="Ex"){
+      p1=as.numeric(i)
+      p2=as.numeric(i+1)
+      p3=as.numeric(i+2)
+    }
+  }
+  print(paste("pvalues",p1,p2,p3))
   g<-unlist(strsplit(as.character(file),"_"))[p3]
   f<-unlist(strsplit(g,""))
   f<-f[1:6]
@@ -406,7 +386,7 @@ for(i in files){
   }
 }
 
-write.csv(design_points,"N:/Projects/W0010 - MHFD/W0010.21002-Hydrology Living Model/00_DELIVERABLES/20220124_AuroraHighlands/PeakFlow_SummaryTables/TheAuroraHighlandsAnalysis_TAHTribPeakFlow_20220124.csv")
+write.csv(design_points,"N:/Projects/W0010 - MHFD/W0010.21002-Hydrology Living Model/3_Models/4_Traditions_Pond_Modifications_in_Aurora/ScriptOutput/OutputTables/TraditionsPond_100yr_20220317.csv")
 
 
 
